@@ -48,10 +48,14 @@ function processLine(line) { // here's where we do something with a line
 
 function writeToTimefile(obj){
 
-	// multiplied by 1000 so that the argument is in milliseconds, not seconds.
 	var date = new Date(obj.timestamp_s*1000);
-	var writeLogPath = './log/'+date.getDate() + '-' + date.getMonth() + '-' + date.getFullYear() + '+' + date.getHours() + ':' + date.getMinutes() + ':00.json';
-	//var writeLogPath = "test.txt";
+    var dates = "0" +date.getDate();
+    var years = date.getFullYear();
+    var months = "0" + (date.getMonth() + 1);
+    var hours = date.getHours();
+    var minutes = "0" + date.getMinutes();
+
+	var writeLogPath = './log/'+dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json';
 	console.log(writeLogPath)
 	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
 	  if (err) throw err;
