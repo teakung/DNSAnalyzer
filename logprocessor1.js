@@ -50,8 +50,8 @@ function writeToTimefile(obj){
 
 	var date = new Date(obj.timestamp_s*1000);
     var dates = "0" +date.getDate();
-    var years = date.getFullYear();
     var months = "0" + (date.getMonth() + 1);
+    var years = date.getFullYear();
     var hours = date.getHours();
     var minutes = "0" + date.getMinutes();
 
