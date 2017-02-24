@@ -49,17 +49,29 @@ function processLine(line) { // here's where we do something with a line
 function writeToTimefile(obj){
 
 	var date = new Date(obj.timestamp_s*1000);
+
+    var filename = getFormattedTimeString(date);
+
+	var writeLogPath = './log/'+filename;
+	console.log(writeLogPath)
+	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
+	  if (err) throw err;
+	}); //we can have sync version if we want.
+}
+
+function getFormattedTimeString(date){
     var dates = "0" +date.getDate();
     var months = "0" + (date.getMonth() + 1);
     var years = date.getFullYear();
     var hours = date.getHours();
     var minutes = "0" + date.getMinutes();
 
-	var writeLogPath = './log/'+dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json';
-	console.log(writeLogPath)
-	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
-	  if (err) throw err;
-	}); //we can have sync version if we want.
+    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json'
+
+    return res
 }
+
+
+
 
 setInterval(readLog, 5*1000);
