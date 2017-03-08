@@ -10,12 +10,10 @@ var lineCount = 0;
 function readLog(){
 	buf = '';
 	var stream = fs.createReadStream(dnsLogPath, {flags: 'r', encoding: 'utf-8'});
-	stream.on('readable', () => {
-		//console.log(typeof(stream.read()));
-	    buf += stream.read(); // when data is read, stash it in a string buffer
-	    //console.log('readable:', stream.read());
-	    pump(); // then process the buffer
-	});
+    stream.on('data', function(d) {
+        buf += d.toString(); // when data is read, stash it in a string buffer
+        pump(); // then process the buffer
+    });
 }
 
 function pump() {
@@ -70,8 +68,5 @@ function getFormattedTimeString(date){
 
     return res
 }
-
-
-
 
 setInterval(readLog, 5*1000);
