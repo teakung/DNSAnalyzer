@@ -42,7 +42,7 @@ function processLogFile(logName){
 
 function pump(logName) {
     var pos
-    var analyzeData = { "countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countDomainnames": [],"countIpsource":{ "IP":0 }}
+    var analyzeData = { "countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
     while ((pos = buf.indexOf('\n')) >= 0) { // keep going while there's a newline somewhere in the buffer
         if (pos == 0) { // if there's more than one newline in a row, the buffer will now start with a newline
             buf = buf.slice(1) // discard it
@@ -51,15 +51,17 @@ function pump(logName) {
         analyzeData =  processLine(buf.slice(0,pos),analyzeData) // hand off the line
         buf = buf.slice(pos+1) // and slice the processed data off the buffer
     }
-/*    console.log("filename : "+logName)
- 	console.log("countDns "+analyzeData.countDns)
- 	console.log("countIpv4 "+analyzeData.countIpv4)
- 	console.log("countTcp "+analyzeData.countTcp)
- 	console.log("countUdp "+analyzeData.countUdp)
- 	console.log("countQtype "+analyzeData.countQtype)
- 	console.log("countQclass "+analyzeData.countQclass)
- 	console.log("countNxdomain "+analyzeData.countNxdomain)*/
- 	console.log(analyzeData.countDomainnames)
+    //console.log("filename : "+logName)
+    writeToTimefile(analyzeData,logName);
+ 	// console.log("countDns "+analyzeData.countDns)
+ 	// console.log("countIpv4 "+analyzeData.countIpv4)
+ 	// console.log("countTcp "+analyzeData.countTcp)
+ 	// console.log("countUdp "+analyzeData.countUdp)
+ 	// console.log("countQtype "+analyzeData.countQtype)
+ 	// console.log("countQclass "+analyzeData.countQclass)
+ 	// console.log("countNxdomain "+analyzeData.countNxdomain)
+ 	// console.log(analyzeData.countQuery)
+ 	//console.log(analyzeData.countIpsource)
 
 }
 
@@ -133,23 +135,69 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 		        break
 		    default:
 		}
+		switch(dnsReq.query) {
+		    default:
+		    	var hostname = dnsReq.query
+		    	//console.log(typeof(hostname))
+		    	//console.log(analyzeData.countQuery.hasOwnProperty(hostname))
+		    	var hostnamePosition = checkStringPosition(analyzeData.countQuery,hostname)
+		    	if(hostnamePosition === -1){
+		    		var obj = {}
+			    	obj[hostname] = 1
+			    	analyzeData.countQuery.push(obj)
+		    	}
+		    	else{
+		    		analyzeData.countQuery[hostnamePosition][hostname] += 1
+		    	}
+
+		    	break
+		}
 		switch(dnsReq.answer) {
 		    case 'NXDOMAIN':
 		        analyzeData.countNxdomain += 1
 		        break
 		    default:
-		    	analyzeData.countNoerror +=1
-		    	var hostname = dnsReq.answer
-		    	console.log(analyzeData.countDomainnames.hasOwnProperty(hostname))
-
-/*		    	var test = {}
-		    	test[hostname] = 1
-		    	analyzeData.countDomainnames.push(test)*/
+		    	analyzeData.countNoerror += 1
 		    	break
 		}
+		switch(dnsReq.client) {
+		    default:
+		    	var hostname = dnsReq.client
+		    	//console.log(typeof(hostname))
+		    	//console.log(analyzeData.countQuery.hasOwnProperty(hostname))
+		    	var hostnamePosition = checkStringPosition(analyzeData.countIpsource,hostname)
+		    	if(hostnamePosition === -1){
+		    		var obj = {}
+			    	obj[hostname] = 1
+			    	analyzeData.countIpsource.push(obj)
+		    	}
+		    	else{
+		    		analyzeData.countIpsource[hostnamePosition][hostname] += 1
+		    	}
 
+		    	break
+		}
     }
     return analyzeData
+}
+
+function writeToTimefile(obj,filename){
+
+	var writeLogPath = './minuteFile/'+filename;
+	console.log(writeLogPath)
+	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
+	  if (err) throw err;
+	}); //we can have sync version if we want.
+}
+
+function checkStringPosition(array,hostname){
+	//if not found fucntion will return -1
+	for (var i = 0; i < array.length; i++){
+		if (array[i].hasOwnProperty(hostname)){
+			return i
+		}
+	}
+	return -1
 }
 
 function getFormattedTimeString(date){
