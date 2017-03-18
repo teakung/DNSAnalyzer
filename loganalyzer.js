@@ -1,5 +1,11 @@
+var elasticsearch = require('elasticsearch');
 var fs = require('fs')
 var rangeCheck = require('range_check')
+
+var client = new elasticsearch.Client({
+  host: 'localhost:9200',
+  log: 'trace'
+});
 
 var logPath = "./log/"
 var buf = ''
@@ -24,9 +30,16 @@ function analyzeList(fileList){
 	    //console.log(fileDate.toLocaleString())
 	    //console.log(fileDate.getTime())
 	    //console.log(minutes)
-	    if((currentDate.getTime()-fileDate.getTime())>60000){
-	    	processLogFile(fileList[i])
-	    }
+
+	    var minuteFileName = './minuteFile/'+fileList[i]
+	    if (fs.existsSync(minuteFileName)) {
+    		console.log('File exists');
+		}
+		else{
+			if((currentDate.getTime()-fileDate.getTime())>60000){
+	    		processLogFile(fileList[i])
+	    	}
+		}
 	}
 }
 
@@ -51,8 +64,13 @@ function pump(logName) {
         analyzeData =  processLine(buf.slice(0,pos),analyzeData) // hand off the line
         buf = buf.slice(pos+1) // and slice the processed data off the buffer
     }
+
+    var param = { index: 'dnsanalyzer', type: 'analyzedminute', body : JSON.stringify(analyzeData)};
+    //client.index(param,  function (error, response) {});
+
     //console.log("filename : "+logName)
     writeToTimefile(analyzeData,logName);
+
  	// console.log("countDns "+analyzeData.countDns)
  	// console.log("countIpv4 "+analyzeData.countIpv4)
  	// console.log("countTcp "+analyzeData.countTcp)
@@ -60,8 +78,8 @@ function pump(logName) {
  	// console.log("countQtype "+analyzeData.countQtype)
  	// console.log("countQclass "+analyzeData.countQclass)
  	// console.log("countNxdomain "+analyzeData.countNxdomain)
- 	// console.log(analyzeData.countQuery)
- 	//console.log(analyzeData.countIpsource)
+ 	// console.log("countQuery "+analyzeData.countQuery)
+ 	// console.log("countIpSource "+analyzeData.countIpsource)
 
 }
 
@@ -156,6 +174,9 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 		    case 'NXDOMAIN':
 		        analyzeData.countNxdomain += 1
 		        break
+		    case 'REFUSED' :
+		    	
+		    	break
 		    default:
 		    	analyzeData.countNoerror += 1
 		    	break
@@ -212,5 +233,5 @@ function getFormattedTimeString(date){
     return res
 }
 
-monitorLogfolder()
-//setInterval(monitorLogfolder, 1*1000)
+//monitorLogfolder()
+setInterval(monitorLogfolder, 5*1000)
