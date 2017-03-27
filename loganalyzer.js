@@ -37,25 +37,26 @@ function analyzeList(fileList){
 		}
 		else{
 			if((currentDate.getTime()-fileDate.getTime())>60000){
-	    		processLogFile(fileList[i])
+	    		processLogFile(fileList[i],fileDate)
 	    	}
 		}
 	}
 }
 
-function processLogFile(logName){
+function processLogFile(logName,fileDate){
 	//console.log(logName)
 	buf = ''
 	var stream = fs.createReadStream('./log/'+logName, {flags: 'r', encoding: 'utf-8'})
 	stream.on('data', function(d) {
 	    buf += d.toString() // when data is read, stash it in a string buffer
-	    pump(logName) // then process the buffer
+	    pump(logName,fileDate) // then process the buffer
 	})
 }
 
-function pump(logName) {
+function pump(logName,fileDate) {
     var pos
-    var analyzeData = { "countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
+    //console.log(fileDate.getTime()/1000)
+    var analyzeData = {"timestamp_s":fileDate.getTime()/1000,"countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
     while ((pos = buf.indexOf('\n')) >= 0) { // keep going while there's a newline somewhere in the buffer
         if (pos == 0) { // if there's more than one newline in a row, the buffer will now start with a newline
             buf = buf.slice(1) // discard it
@@ -65,12 +66,14 @@ function pump(logName) {
         buf = buf.slice(pos+1) // and slice the processed data off the buffer
     }
 
+    //Elasticsearch part
     var param = { index: 'dnsanalyzer', type: 'analyzedminute', body : JSON.stringify(analyzeData)};
     //client.index(param,  function (error, response) {});
 
+    //File writer path
     //console.log("filename : "+logName)
     writeToTimefile(analyzeData,logName);
-
+    
  	// console.log("countDns "+analyzeData.countDns)
  	// console.log("countIpv4 "+analyzeData.countIpv4)
  	// console.log("countTcp "+analyzeData.countTcp)
@@ -158,16 +161,15 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 		    	var hostname = dnsReq.query
 		    	//console.log(typeof(hostname))
 		    	//console.log(analyzeData.countQuery.hasOwnProperty(hostname))
+
 		    	var hostnamePosition = checkStringPosition(analyzeData.countQuery,hostname)
 		    	if(hostnamePosition === -1){
-		    		var obj = {}
-			    	obj[hostname] = 1
+		    		var obj = {"hostname":hostname,"count":1}
 			    	analyzeData.countQuery.push(obj)
 		    	}
 		    	else{
-		    		analyzeData.countQuery[hostnamePosition][hostname] += 1
+		    		analyzeData.countQuery[hostnamePosition].count += 1
 		    	}
-
 		    	break
 		}
 		switch(dnsReq.answer) {
@@ -188,14 +190,12 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 		    	//console.log(analyzeData.countQuery.hasOwnProperty(hostname))
 		    	var hostnamePosition = checkStringPosition(analyzeData.countIpsource,hostname)
 		    	if(hostnamePosition === -1){
-		    		var obj = {}
-			    	obj[hostname] = 1
+		    		var obj = {"hostname":hostname,"count":1}
 			    	analyzeData.countIpsource.push(obj)
 		    	}
 		    	else{
-		    		analyzeData.countIpsource[hostnamePosition][hostname] += 1
+		    		analyzeData.countIpsource[hostnamePosition].count += 1
 		    	}
-
 		    	break
 		}
     }
@@ -205,7 +205,7 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 function writeToTimefile(obj,filename){
 
 	var writeLogPath = './minuteFile/'+filename;
-	console.log(writeLogPath)
+	//console.log(writeLogPath)
 	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
 	  if (err) throw err;
 	}); //we can have sync version if we want.
@@ -213,8 +213,12 @@ function writeToTimefile(obj,filename){
 
 function checkStringPosition(array,hostname){
 	//if not found fucntion will return -1
+
+	//obj[i].code == needle
+
 	for (var i = 0; i < array.length; i++){
-		if (array[i].hasOwnProperty(hostname)){
+		array[i].hostname == hostname
+		if (array[i].hostname == hostname){
 			return i
 		}
 	}
