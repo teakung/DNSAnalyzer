@@ -7,11 +7,10 @@ var client = new elasticsearch.Client({
   log: 'trace'
 });
 
-var logPath = "./log/"
+var logPath = './log/'
 var buf = ''
-//console.log(fileList)
+
 function monitorLogfolder(){
-	//var fileList = []
 	var fileList = fs.readdirSync(logPath)
 	analyzeList(fileList)
 }
@@ -46,7 +45,7 @@ function analyzeList(fileList){
 function processLogFile(logName,fileDate){
 	//console.log(logName)
 	buf = ''
-	var stream = fs.createReadStream('./log/'+logName, {flags: 'r', encoding: 'utf-8'})
+	var stream = fs.createReadStream(logPath+logName, {flags: 'r', encoding: 'utf-8'})
 	stream.on('data', function(d) {
 	    buf += d.toString() // when data is read, stash it in a string buffer
 	    pump(logName,fileDate) // then process the buffer
@@ -213,9 +212,6 @@ function writeToTimefile(obj,filename){
 
 function checkStringPosition(array,hostname){
 	//if not found fucntion will return -1
-
-	//obj[i].code == needle
-
 	for (var i = 0; i < array.length; i++){
 		array[i].hostname == hostname
 		if (array[i].hostname == hostname){
