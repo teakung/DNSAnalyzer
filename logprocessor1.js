@@ -1,7 +1,14 @@
 var fs = require('fs');
+var elasticsearch = require('elasticsearch');
+
+var client = new elasticsearch.Client({
+  host: 'localhost:9200',
+  log: 'trace'
+});
 
 //var dnsLogPath= "/home/blackcat/Desktop/dns preprocessor/passivedns.log";
-var dnsLogPath= "/var/log/passivedns.log";
+var dnsLogPath= '/var/log/passivedns.log';
+var minuteFileFolder = './minuteFile/'
 
 
 var buf = '';
@@ -39,6 +46,9 @@ function processLine(line) { // here's where we do something with a line
         var obj = JSON.parse(line); // parse the JSON
         writeToTimefile(obj);
         lineCount += 1; //line counter
+
+        sendToElastic('dnsanalyzer','dnstraffic',obj)
+
         //console.log(lineCount);
         //console.log(obj); // do something with the data here!
     }
@@ -50,11 +60,16 @@ function writeToTimefile(obj){
 
     var filename = getFormattedTimeString(date);
 
-	var writeLogPath = './log/'+filename;
+	var writeLogPath = minuteFileFolder+filename;
 	console.log(writeLogPath)
 	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
 	  if (err) throw err;
 	}); //we can have sync version if we want.
+}
+
+function sendToElastic(indexIn,typeIn,obj){
+    var param = { index: indexIn, type: typeIn, body : JSON.stringify(obj)};
+    client.index(param,  function (error, response) {console.log(error)});
 }
 
 function getFormattedTimeString(date){
