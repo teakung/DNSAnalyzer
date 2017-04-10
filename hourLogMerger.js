@@ -189,5 +189,5 @@ function getFormattedTimeString(date){
     return res
 }
 
-monitorLogfolder()
-//setInterval(monitorLogfolder, 5*1000)
+//monitorLogfolder()
+setInterval(monitorLogfolder, 5*1000)
