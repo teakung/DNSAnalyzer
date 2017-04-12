@@ -1,6 +1,7 @@
 var elasticsearch = require('elasticsearch');
 var fs = require('fs')
 var rangeCheck = require('range_check')
+var lineByLine = require('n-readlines');
 
 var client = new elasticsearch.Client({
   host: 'localhost:9200',
@@ -31,13 +32,16 @@ function analyzeList(fileList){
 	    //console.log(fileDate.getTime())
 	    //console.log(minutes)
 
-	    var minuteFileName = analyzedMinuteFolder+fileList[i]
-	    if (fs.existsSync(minuteFileName)) {
+	    var analyzedMinuteName = analyzedMinuteFolder+fileList[i]
+
+
+	    if (fs.existsSync(analyzedMinuteName)) {
     		console.log('File exists');
 		}
 		else{
 			if((currentDate.getTime()-fileDate.getTime())>60000){
 	    		processLogFile(fileList[i],fileDate)
+	    		//console.log(fileList[i])
 	    	}
 		}
 	}
@@ -45,55 +49,26 @@ function analyzeList(fileList){
 
 function processLogFile(logName,fileDate){
 	//console.log(logName)
-	buf = ''
-	var stream = fs.createReadStream(minuteFileFolder+logName, {flags: 'r', encoding: 'utf-8'})
-	stream.on('data', function(d) {
-	    buf += d.toString() // when data is read, stash it in a string buffer
-	    pump(logName,fileDate) // then process the buffer
-	})
-}
+	var analyzeData = {"timestamp_s":fileDate.getTime()/1000+'',"countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
+	
 
-function pump(logName,fileDate) {
-    var pos
-    //console.log(fileDate.getTime()/1000)
-    var analyzeData = {"timestamp_s":fileDate.getTime()/1000+'',"countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
-    while ((pos = buf.indexOf('\n')) >= 0) { // keep going while there's a newline somewhere in the buffer
-        if (pos == 0) { // if there's more than one newline in a row, the buffer will now start with a newline
-            buf = buf.slice(1) // discard it
-            continue // so that the next iteration will start with data
-        }
-        analyzeData = processLine(buf.slice(0,pos),analyzeData) // hand off the line
-        buf = buf.slice(pos+1) // and slice the processed data off the buffer
-    }
-
-    //Elasticsearch part
-    //sendToElastic('dnsanalyzer','analyzedminute',analyzeData)
-
-    //File writer path
-    //console.log("filename : "+logName)
-    appendToFile(analyzeData,logName);
-    
- 	// console.log("countDns "+analyzeData.countDns)
- 	// console.log("countIpv4 "+analyzeData.countIpv4)
- 	// console.log("countTcp "+analyzeData.countTcp)
- 	// console.log("countUdp "+analyzeData.countUdp)
- 	// console.log("countQtype "+analyzeData.countQtype)
- 	// console.log("countQclass "+analyzeData.countQclass)
- 	// console.log("countNxdomain "+analyzeData.countNxdomain)
- 	// console.log("countQuery "+analyzeData.countQuery)
- 	// console.log("countIpSource "+analyzeData.countIpsource)
-
+	var liner = new lineByLine(minuteFileFolder+logName);
+	var line;
+	var lineNumber = 0;
+	while (line = liner.next()) {
+    	//console.log('Line ' + lineNumber);
+    	lineNumber++;
+    	analyzeData = processLine(line,analyzeData)
+	}
+	appendToFile(analyzeData,logName);
 }
 
 function processLine(line,analyzeData) { // here's where we do something with a line
 
-    if (line[line.length-1] == '\r') line=line.substr(0,line.length-1) // discard CR (0x0D)
+        var dnsReq = JSON.parse(line);
 
-    if (line.length > 0) { // ignore empty lines
-
-        var dnsReq = JSON.parse(line)
-        //console.log(dnsReq) // do something with the data here!
-        analyzeData.countDns +=1
+        //console.log(dnsReq); // do something with the data here!
+        analyzeData.countDns +=1;
         //console.log(rangeCheck.ver(dnsReq.client)) 
 		switch(rangeCheck.ver(dnsReq.client)) {
 		    case 4:
@@ -197,7 +172,6 @@ function processLine(line,analyzeData) { // here's where we do something with a 
 		    	}
 		    	break
 		}
-    }
     return analyzeData
 }
 
@@ -210,9 +184,10 @@ function appendToFile(obj,filename){
 
 	var writeLogPath = analyzedMinuteFolder+filename;
 	//console.log(writeLogPath)
-	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
+/*	fs.appendFile(writeLogPath, JSON.stringify(obj)+'\n', (err) => {
 	  if (err) throw err;
-	}); //we can have sync version if we want.
+	}); //we can have sync version if we want.*/
+	fs.appendFileSync(writeLogPath,JSON.stringify(obj)+'\n')
 }
 
 function checkStringPosition(array,hostname){

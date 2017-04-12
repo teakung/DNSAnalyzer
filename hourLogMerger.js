@@ -10,6 +10,7 @@ var client = new elasticsearch.Client({
 var analyzedMinuteFolder = './analyzedMinute/'
 var analyzedHourFolder = "./analyzedHour/"
 var buf = ''
+var processedLog = []
 
 function monitorLogfolder(){
 	var fileList = fs.readdirSync(analyzedMinuteFolder)
@@ -17,7 +18,6 @@ function monitorLogfolder(){
 }
 
 function analyzeList(fileList){
-	var processedLog = []
 	for(i = 0 ; i < fileList.length ; i++){
 		//console.log("filename: "+fileList[i])
 
@@ -40,28 +40,27 @@ function analyzeList(fileList){
 		if(!processedLog.includes(fileDate.getTime())){
 			if((currentDate.getTime()-fileDate.getTime())>3600000){
 				processedLog.push(fileDate.getTime())
-	    		//processLogFile(fileList[i],fileDateHours)
 	    		var minuteData = JSON.parse(fs.readFileSync(analyzedMinuteFolder+fileList[i]).toString())
 	    		if (fs.existsSync(analyzedHourFolder+fileNameHours)) {
 					//console.log('File exists');
 					var hourData = JSON.parse(fs.readFileSync(analyzedHourFolder+fileNameHours).toString())
 				}
 				else{
-					//todo: write starter file
 					var blankData = {"timestamp_s":fileDate.getTime()/1000+'',"countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
 					fs.writeFileSync(analyzedHourFolder+fileNameHours, JSON.stringify(blankData))
 					var hourData = JSON.parse(fs.readFileSync(analyzedHourFolder+fileNameHours).toString())
 				}
 	    	}
 	    }
-
+	    console.log(processedLog.length)
 	    //console.log(minuteData)
 	    //console.log(hourData)
 	    var result = sumanalyzedData(hourData,minuteData)
 	    //console.log(result)
+	    //console.log(result)
 	    writeToFile(analyzedHourFolder+fileNameHours,result)
 	    
-	    sendToElastic('dnsanalyzer','analyzedhour',result)
+	    //sendToElastic('dnsanalyzer','analyzedhour',result)
 	}
 }
 
@@ -189,5 +188,5 @@ function getFormattedTimeString(date){
     return res
 }
 
-//monitorLogfolder()
-setInterval(monitorLogfolder, 5*1000)
+monitorLogfolder()
+//setInterval(monitorLogfolder, 5*1000)

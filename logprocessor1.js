@@ -6,8 +6,8 @@ var client = new elasticsearch.Client({
   log: 'trace'
 });
 
-var dnsLogPath= '/home/blackcat/Desktop/dnsProcessor/logtest/passivedns.log';
-//var dnsLogPath= '/var/log/passivedns.log';
+//var dnsLogPath= '/home/blackcat/Desktop/dnsProcessor/logtest/passivedns.log';
+var dnsLogPath= '/var/log/passivedns.log';
 var minuteFileFolder = './minuteFile/'
 
 
@@ -51,7 +51,7 @@ function processLine(line) { // here's where we do something with a line
         lineCount += 1; //line counter
         
         writeToTimefile(obj);
-        sendToElastic('dnsanalyzer','dnstraffic',obj)
+        //sendToElastic('dnsanalyzer','dnstraffic',obj)
 
         //console.log(lineCount);
         //console.log(obj); // do something with the data here!
