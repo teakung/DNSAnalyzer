@@ -1,14 +1,8 @@
-var elasticsearch = require('elasticsearch');
 var fs = require('fs')
 var rangeCheck = require('range_check')
 
-var client = new elasticsearch.Client({
-  host: 'localhost:9200',
-  log: 'trace'
-});
-
-var analyzedMinuteFolder = './analyzedMinute/'
-var analyzedHourFolder = "./analyzedHour/"
+var analyzedMinuteFolder = './dnslog/analyzedMinute/'
+var analyzedHourFolder = "./dnslog/analyzedHour/"
 var buf = ''
 var processedLog = []
 
@@ -19,7 +13,7 @@ function monitorLogfolder(){
 
 function analyzeList(fileList){
 	for(i = 0 ; i < fileList.length ; i++){
-		//console.log("filename: "+fileList[i])
+		console.log("filename: "+fileList[i])
 
 		var currentDate = new Date()
 
@@ -29,6 +23,8 @@ function analyzeList(fileList){
 	    var hours = parseInt(fileList[i].substr(11,2))
 	    var minutes = parseInt(fileList[i].substr(14,2))
 	    var fileDate = new Date(years,months,dates,hours,minutes,0)
+
+	    console.log(dates+' '+months+' '+years+' '+hours+' '+minutes)
 
 	    var fileDateHours = new Date(years,months,dates,hours,0,0)
 	    var fileNameHours = getFormattedTimeString(fileDateHours)
@@ -52,15 +48,18 @@ function analyzeList(fileList){
 				}
 	    	}
 	    }
+
+
 	    console.log(processedLog.length)
 	    //console.log(minuteData)
 	    //console.log(hourData)
+
 	    var result = sumanalyzedData(hourData,minuteData)
+
 	    //console.log(result)
 	    //console.log(result)
+
 	    writeToFile(analyzedHourFolder+fileNameHours,result)
-	    
-	    //sendToElastic('dnsanalyzer','analyzedhour',result)
 	}
 }
 
@@ -123,67 +122,23 @@ function mergeJsonArray(a1,a2){
 	return res
 }
 
-function sendToElastic(indexIn,typeIn,obj){
-	var param = { index: indexIn, type: typeIn, body : JSON.stringify(obj)};
-    client.index(param,  function (error, response) {console.log(error)});
-}
-
 function writeToFile(filename,obj){
-	fs.writeFileSync(filename, JSON.stringify(obj))
+	fs.writeFileSync(filename, JSON.stringify(obj)+'\n')
 }
 
 function sendToElastic(indexIn,typeIn,obj){
 	var param = { index: indexIn, type: typeIn, body : JSON.stringify(obj)};
     client.index(param,  function (error, response) {console.log(error)});
 }
-
-function processLogFile(logName,fileDateHours){
-	//console.log(logName)
-	//console.log(fileDateHours)
-
-	
-/*	buf = ''
-	var stream = fs.createReadStream(analyzedMinuteFolder+logName, {flags: 'r', encoding: 'utf-8'})
-	var minuteData
-	readData(stream,function(result){
-		minuteData = result
-		console.log(result)
-	})*/
-	
-	//var obj1 = JSON.parse(fs.readFileSync('../minuteFile/01-03-2017+16:36:00.json').toString())
-
-}
-
-/*function readData(stream,callback){
-	stream.on('data', function(d) {
-	    buf += d.toString() // when data is read, stash it in a string buffer
-	    var pos
-	    while ((pos = buf.indexOf('\n')) >= 0) { // keep going while there's a newline somewhere in the buffer
-	        if (pos == 0) { // if there's more than one newline in a row, the buffer will now start with a newline
-	            buf = buf.slice(1) // discard it
-	            continue // so that the next iteration will start with data
-	        }
-	        var res = JSON.parse(buf.slice(0,pos)) // hand off the line
-	        buf = buf.slice(pos+1) // and slice the processed data off the buffer
-	    }
-	    callback(res)
-	})
-}*/
-
-
-/*function processLine(line) { // here's where we do something with a line
-	console.log(JSON.parse(line))
-}*/
-
 
 function getFormattedTimeString(date){
     var dates = "0" +date.getDate()
     var months = "0" + (date.getMonth() + 1)
     var years = date.getFullYear()
-    var hours = date.getHours()
+    var hours = "0" + date.getHours()
     var minutes = "0" + date.getMinutes()
 
-    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json'
+    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours.substr(-2) + ':' + minutes.substr(-2) + ':00.json'
 
     return res
 }

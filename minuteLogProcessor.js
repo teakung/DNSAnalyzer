@@ -1,14 +1,8 @@
 var fs = require('fs');
-var elasticsearch = require('elasticsearch');
 
-var client = new elasticsearch.Client({
-  host: 'localhost:9200',
-  log: 'trace'
-});
-
-//var dnsLogPath= '/home/blackcat/Desktop/dnsProcessor/logtest/passivedns.log';
-var dnsLogPath= '/var/log/passivedns.log';
-var minuteFileFolder = './minuteFile/'
+var dnsLogPath= './logtest/passivedns.log';
+//var dnsLogPath= '/var/log/passivedns.log';
+var minuteFileFolder = './dnslog/minuteFile/'
 
 
 var buf = '';
@@ -51,7 +45,6 @@ function processLine(line) { // here's where we do something with a line
         lineCount += 1; //line counter
         
         writeToTimefile(obj);
-        //sendToElastic('dnsanalyzer','dnstraffic',obj)
 
         //console.log(lineCount);
         //console.log(obj); // do something with the data here!
@@ -71,19 +64,14 @@ function writeToTimefile(obj){
 	}); //we can have sync version if we want.
 }
 
-function sendToElastic(indexIn,typeIn,obj){
-    var param = { index: indexIn, type: typeIn, body : JSON.stringify(obj)};
-    client.index(param,  function (error, response) {console.log(error)});
-}
-
 function getFormattedTimeString(date){
-    var dates = "0" +date.getDate();
-    var months = "0" + (date.getMonth() + 1);
-    var years = date.getFullYear();
-    var hours = date.getHours();
-    var minutes = "0" + date.getMinutes();
+    var dates = "0" +date.getDate()
+    var months = "0" + (date.getMonth() + 1)
+    var years = date.getFullYear()
+    var hours = "0" + date.getHours()
+    var minutes = "0" + date.getMinutes()
 
-    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json'
+    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours.substr(-2) + ':' + minutes.substr(-2) + ':00.json'
 
     return res
 }

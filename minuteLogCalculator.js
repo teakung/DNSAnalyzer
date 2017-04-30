@@ -1,15 +1,9 @@
-var elasticsearch = require('elasticsearch');
 var fs = require('fs')
 var rangeCheck = require('range_check')
 var lineByLine = require('n-readlines');
 
-var client = new elasticsearch.Client({
-  host: 'localhost:9200',
-  log: 'trace'
-});
-
-var minuteFileFolder = './minuteFile/'
-var analyzedMinuteFolder = './analyzedMinute/'
+var minuteFileFolder = './dnslog/minuteFile/'
+var analyzedMinuteFolder = './dnslog/analyzedMinute/'
 var buf = ''
 
 function monitorLogfolder(){
@@ -41,7 +35,7 @@ function analyzeList(fileList){
 		else{
 			if((currentDate.getTime()-fileDate.getTime())>60000){
 	    		processLogFile(fileList[i],fileDate)
-	    		//console.log(fileList[i])
+	    		console.log(fileList[i])
 	    	}
 		}
 	}
@@ -51,7 +45,6 @@ function processLogFile(logName,fileDate){
 	//console.log(logName)
 	var analyzeData = {"timestamp_s":fileDate.getTime()/1000+'',"countDns":0,"countTimeoutDns":0,"countIpv4":0,"countIpv6":0,"countTcp":0,"countUdp":0,"countEdns":0,"countOpcode":{ "AA":0,"TC":0,"RD":0,"RA":0,"CD":0,"AD":0,"QR":0},"countNoerror":0,"countNxdomain":0,"countQtype":{ "A":0,"NS":0,"CNAME":0,"SOA":0,"WKS":0,"PTR":0,"MX":0,"SRV":0,"AAAA":0,"ANY":0},"countQclass":{ "IN":0},"countQuery":[],"countIpsource":[]}
 	
-
 	var liner = new lineByLine(minuteFileFolder+logName);
 	var line;
 	var lineNumber = 0;
@@ -175,11 +168,6 @@ function processLine(line,analyzeData) { // here's where we do something with a 
     return analyzeData
 }
 
-function sendToElastic(indexIn,typeIn,obj){
-	var param = { index: indexIn, type: typeIn, body : JSON.stringify(obj)};
-    client.index(param,  function (error, response) {console.log(error)});
-}
-
 function appendToFile(obj,filename){
 
 	var writeLogPath = analyzedMinuteFolder+filename;
@@ -205,10 +193,10 @@ function getFormattedTimeString(date){
     var dates = "0" +date.getDate()
     var months = "0" + (date.getMonth() + 1)
     var years = date.getFullYear()
-    var hours = date.getHours()
+    var hours = "0" + date.getHours()
     var minutes = "0" + date.getMinutes()
 
-    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours + ':' + minutes.substr(-2) + ':00.json'
+    var res = dates.substr(-2) + '-' + months.substr(-2) + '-' + years + '+' + hours.substr(-2) + ':' + minutes.substr(-2) + ':00.json'
 
     return res
 }
